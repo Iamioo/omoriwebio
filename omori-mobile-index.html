@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>OMORI Mobile</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:system-ui,sans-serif;touch-action:none}
+#game{position:fixed;inset:0;width:100%;height:100%;border:0;background:#000}
+#top{position:fixed;top:max(8px,env(safe-area-inset-top));left:8px;right:8px;display:flex;justify-content:space-between;z-index:20;pointer-events:none}
+.topbtn{pointer-events:auto;border:1px solid #aaa;background:rgba(15,15,15,.78);color:#fff;border-radius:6px;padding:9px 12px;font-weight:700;font-size:14px;backdrop-filter:blur(5px)}
+#controls{position:fixed;inset:0;z-index:15;pointer-events:none}
+.pad,.actions{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));pointer-events:auto}
+.pad{left:18px;width:180px;height:180px}
+.actions{right:18px;width:190px;height:170px}
+.key{position:absolute;width:58px;height:58px;border:2px solid rgba(255,255,255,.72);border-radius:50%;background:rgba(10,10,10,.45);color:#fff;font-size:24px;font-weight:800;display:grid;place-items:center;user-select:none;-webkit-user-select:none;backdrop-filter:blur(3px)}
+.key.pressed{background:rgba(255,255,255,.38);transform:scale(.94)}
+.up{left:61px;top:0}.left{left:0;top:61px}.down{left:61px;top:122px}.right{left:122px;top:61px}
+.a{right:0;top:40px}.b{right:64px;top:92px}.x{right:64px;top:0}.y{right:128px;top:40px}
+.small{width:50px;height:50px;font-size:13px}
+#menu{position:fixed;z-index:50;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;padding:18px}
+.panel{width:min(430px,100%);max-height:92vh;overflow:auto;background:#111;color:#fff;border:1px solid #555;border-radius:8px;padding:18px}
+.panel h2{margin:0 0 14px}.row{display:grid;grid-template-columns:1fr 130px;gap:12px;align-items:center;margin:12px 0}
+select,input[type=range]{width:100%}select{background:#222;color:#fff;border:1px solid #555;padding:8px;border-radius:5px}
+.menuBtns{display:flex;gap:8px;margin-top:18px}.menuBtns button{flex:1}
+.note{font-size:12px;color:#bbb;line-height:1.35}
+@media (max-width:700px) and (orientation:portrait){
+ .pad{transform:scale(.82);transform-origin:left bottom}
+ .actions{transform:scale(.82);transform-origin:right bottom}
+}
+</style>
+</head>
+<body>
+<iframe id="game" src="https://fivenightsatfreddysgame.io/play/omori-web-port/" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe>
+
+<div id="top">
+  <button class="topbtn" id="home">⌂ Home</button>
+  <button class="topbtn" id="settings">⚙ Steuerung</button>
+</div>
+
+<div id="controls">
+ <div class="pad">
+  <button class="key up" data-action="up">▲</button>
+  <button class="key left" data-action="left">◀</button>
+  <button class="key down" data-action="down">▼</button>
+  <button class="key right" data-action="right">▶</button>
+ </div>
+ <div class="actions">
+  <button class="key a" data-action="a">A</button>
+  <button class="key b" data-action="b">B</button>
+  <button class="key x" data-action="x">X</button>
+  <button class="key y" data-action="y">Y</button>
+ </div>
+</div>
+
+<div id="menu">
+ <div class="panel">
+  <h2>Handy-Steuerung</h2>
+  <div class="row"><label>Größe</label><input id="size" type="range" min="60" max="150" value="100"></div>
+  <div class="row"><label>Deckkraft</label><input id="opacity" type="range" min="20" max="100" value="75"></div>
+  <div class="row"><label>A-Taste</label><select data-map="a"></select></div>
+  <div class="row"><label>B-Taste</label><select data-map="b"></select></div>
+  <div class="row"><label>X-Taste</label><select data-map="x"></select></div>
+  <div class="row"><label>Y-Taste</label><select data-map="y"></select></div>
+  <p class="note">Standard: Pfeile zum Laufen, Z = Bestätigen, X = Zurück/Menü, Shift = Rennen, A = weitere Aktion. Einstellungen werden auf dem Gerät gespeichert.</p>
+  <div class="menuBtns"><button class="topbtn" id="reset">Zurücksetzen</button><button class="topbtn" id="close">Fertig</button></div>
+ </div>
+</div>
+
+<script>
+const game=document.getElementById('game');
+const defaults={size:100,opacity:75,map:{up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',a:'z',b:'x',x:'Shift',y:'a'}};
+let cfg;
+try{cfg=JSON.parse(localStorage.getItem('omoriMobile'))||structuredClone(defaults)}catch(e){cfg=structuredClone(defaults)}
+cfg.map={...defaults.map,...(cfg.map||{})};
+
+const keyInfo={
+ ArrowUp:{key:'ArrowUp',code:'ArrowUp',keyCode:38},
+ ArrowDown:{key:'ArrowDown',code:'ArrowDown',keyCode:40},
+ ArrowLeft:{key:'ArrowLeft',code:'ArrowLeft',keyCode:37},
+ ArrowRight:{key:'ArrowRight',code:'ArrowRight',keyCode:39},
+ z:{key:'z',code:'KeyZ',keyCode:90},
+ x:{key:'x',code:'KeyX',keyCode:88},
+ a:{key:'a',code:'KeyA',keyCode:65},
+ s:{key:'s',code:'KeyS',keyCode:83},
+ Shift:{key:'Shift',code:'ShiftLeft',keyCode:16},
+ Enter:{key:'Enter',code:'Enter',keyCode:13},
+ Escape:{key:'Escape',code:'Escape',keyCode:27},
+ Space:{key:' ',code:'Space',keyCode:32}
+};
+
+function send(action,type){
+ const k=keyInfo[cfg.map[action]]||keyInfo.z;
+ game.focus();
+ const payload={type:'omori-mobile-key',event:type,key:k.key,code:k.code,keyCode:k.keyCode};
+ try{game.contentWindow.postMessage(payload,'*')}catch(e){}
+ try{
+   const ev=new KeyboardEvent(type,{key:k.key,code:k.code,bubbles:true,cancelable:true});
+   game.contentWindow.dispatchEvent(ev);
+ }catch(e){}
+}
+document.querySelectorAll('.key').forEach(btn=>{
+ const act=btn.dataset.action;
+ const down=e=>{e.preventDefault();btn.classList.add('pressed');send(act,'keydown')};
+ const up=e=>{e.preventDefault();btn.classList.remove('pressed');send(act,'keyup')};
+ btn.addEventListener('pointerdown',down);
+ btn.addEventListener('pointerup',up);
+ btn.addEventListener('pointercancel',up);
+ btn.addEventListener('pointerleave',e=>{if(btn.classList.contains('pressed'))up(e)});
+});
+
+const choices=[['z','Z'],['x','X'],['a','A'],['s','S'],['Shift','Shift'],['Enter','Enter'],['Escape','Esc'],['Space','Leertaste']];
+document.querySelectorAll('select[data-map]').forEach(sel=>{
+ choices.forEach(([v,t])=>sel.add(new Option(t,v)));
+ sel.value=cfg.map[sel.dataset.map];
+ sel.onchange=()=>{cfg.map[sel.dataset.map]=sel.value;save()}
+});
+function apply(){
+ document.querySelector('.pad').style.scale=cfg.size/100;
+ document.querySelector('.actions').style.scale=cfg.size/100;
+ document.querySelectorAll('.key').forEach(x=>x.style.opacity=cfg.opacity/100);
+ document.getElementById('size').value=cfg.size;
+ document.getElementById('opacity').value=cfg.opacity;
+ document.querySelectorAll('select[data-map]').forEach(s=>s.value=cfg.map[s.dataset.map]);
+}
+function save(){localStorage.setItem('omoriMobile',JSON.stringify(cfg));apply()}
+document.getElementById('size').oninput=e=>{cfg.size=+e.target.value;save()};
+document.getElementById('opacity').oninput=e=>{cfg.opacity=+e.target.value;save()};
+document.getElementById('settings').onclick=()=>document.getElementById('menu').style.display='flex';
+document.getElementById('close').onclick=()=>document.getElementById('menu').style.display='none';
+document.getElementById('reset').onclick=()=>{cfg=structuredClone(defaults);save()};
+document.getElementById('home').onclick=()=>location.href='https://iamioo.github.io/home';
+apply();
+</script>
+</body>
+</html>
