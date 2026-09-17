@@ -1,40 +1,218 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <link rel="icon" href="icon/icon.png" type="image/png">
-    <link rel="apple-touch-icon" href="icon/icon.png">
-    <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
-    <link rel="stylesheet" type="text/css" href="mobile.css">
-    <title>OMORI</title>
+<base href="https://rawcdn.githack.com/genizy/web-port/5c578559bf738e50a13ce0ab05db778f925ad445/omori-fixed/">
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<link rel="icon" href="icon/icon.png" type="image/png">
+<link rel="apple-touch-icon" href="icon/icon.png">
+<link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
+<title>OMORI</title>
+<style>
+*{touch-action:manipulation}
+html,body{margin:0;padding:0;background:#000;overflow:hidden;overscroll-behavior:none;width:100%;height:100%;font-family:'GameFont',sans-serif}
+body{display:flex;justify-content:center;align-items:center}
+canvas{max-width:100vw;max-height:100vh;display:block}
+
+#topBar{position:fixed;top:0;left:0;right:0;height:44px;z-index:999998;pointer-events:none;display:flex;align-items:center;padding:0 8px;gap:8px}
+#menuBtn{pointer-events:auto;width:42px;height:42px;border-radius:10px;border:2px solid #fff;background:#111;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.6);user-select:none;-webkit-tap-highlight-color:transparent}
+#menuBtn:active{transform:scale(.92)}
+#topTitle{color:#fff;font-size:13px;letter-spacing:2px;opacity:.7;pointer-events:none;text-shadow:0 1px 4px #000}
+
+#menuOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999990;display:none;backdrop-filter:blur(2px)}
+#menuOverlay.open{display:block}
+#sideMenu{position:fixed;top:0;left:0;bottom:0;width:330px;max-width:86vw;background:#0a0a0a;border-right:2px solid #fff;z-index:999991;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column}
+#sideMenu.open{transform:translateX(0)}
+.menuHead{position:sticky;top:0;background:#0a0a0a;border-bottom:2px solid #222;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;z-index:1}
+.menuHead h2{margin:0;color:#fff;font-size:16px;letter-spacing:3px;font-weight:900}
+.menuHead button{width:32px;height:32px;border-radius:8px;border:1px solid #444;background:#1a1a1a;color:#fff;font-size:16px;cursor:pointer}
+.menuBody{padding:16px;display:flex;flex-direction:column;gap:18px}
+.menuSection{border:1px solid #222;border-radius:14px;padding:14px;background:#111}
+.menuSection h3{margin:0 0 12px 0;color:#fff;font-size:12px;letter-spacing:2px;opacity:.9}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #1e1e1e}
+.row:last-child{border-bottom:none}
+.row label{color:#ccc;font-size:13px;flex:1}
+.row .val{color:#fff;font-size:12px;opacity:.7;min-width:36px;text-align:right}
+.switch{width:44px;height:26px;border-radius:13px;background:#333;position:relative;cursor:pointer;flex-shrink:0;border:1px solid #444;transition:background .2s}
+.switch.on{background:#fff}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s,background .2s;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.switch.on::after{background:#000;transform:translateX(18px)}
+input[type=range]{width:120px;accent-color:#fff}
+.btn{width:100%;padding:11px 12px;border-radius:10px;border:2px solid #fff;background:#fff;color:#000;font-weight:900;letter-spacing:1px;cursor:pointer;font-size:13px}
+.btnGhost{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #444;background:#1a1a1a;color:#fff;cursor:pointer;font-size:13px}
+.linkBtn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;width:100%;padding:12px;border-radius:10px;background:#fff;color:#000;font-weight:900;letter-spacing:1px;border:2px solid #fff}
+.hint{color:#888;font-size:11px;line-height:1.4}
+.pillRow{display:flex;flex-wrap:wrap;gap:6px}
+.pill{padding:6px 10px;border-radius:999px;border:1px solid #333;background:#181818;color:#ccc;font-size:12px;cursor:pointer;user-select:none}
+.pill.on{border-color:#fff;background:#fff;color:#000;font-weight:700}
+.editBadge{display:none;color:#ff3b30;font-size:11px;font-weight:900;letter-spacing:1px}
+.editBadge.on{display:block}
+
+#mobileControls{position:fixed;inset:0;pointer-events:none;z-index:99990;--scale:1;--opacity:0.9}
+#mobileControls.hidden{display:none}
+.ctrl{position:absolute;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;border-radius:50%;border:2.5px solid rgba(255,255,255,.85);background:rgba(0,0,0,.32);backdrop-filter:blur(3px);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;box-shadow:0 4px 16px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.2);opacity:var(--opacity);transform:translate(-50%,-50%) scale(var(--scale));transform-origin:center;transition:opacity .15s, filter .15s}
+.ctrl:active,.ctrl.pressed{filter:brightness(1.25);background:rgba(255,255,255,.18);border-color:#fff;transform:translate(-50%,-50%) scale(calc(var(--scale) * .92))}
+.ctrl svg{width:42%;height:42%;fill:#fff;opacity:.95;pointer-events:none}
+.ctrl .lbl{font-size:16px;letter-spacing:1px;pointer-events:none;line-height:1}
+.ctrl.small{width:64px;height:64px}
+.ctrl.medium{width:74px;height:74px}
+.ctrl.big{width:92px;height:92px}
+.ctrl.editMode{border-style:dashed;border-color:#ffd60a;box-shadow:0 0 0 3px rgba(255,214,10,.25),0 4px 16px rgba(0,0,0,.5)}
+.ctrl.editMode::after{content:'↕';position:absolute;right:-6px;bottom:-6px;width:22px;height:22px;border-radius:50%;background:#ffd60a;color:#000;font-size:11px;display:flex;align-items:center;justify-content:center;border:2px solid #000}
+.dpad-center{width:12px;height:12px;background:rgba(255,255,255,.15);border-radius:50%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;opacity:.5}
+@media(min-width:1000px){#mobileControls.autoHide{display:none}}
+</style>
 </head>
 
-<body style="background-color: black">
-    <script type="text/javascript">window.__OMORI_WEB__ = true;</script>
-    <script type="text/javascript" src="web_atlas_data.js"></script>
-    <script type="text/javascript" src="web_language_data.js"></script>
-    <script type="text/javascript" src="web_yaml_data.js"></script>
-    <script type="text/javascript" src="web_shim.js"></script>
-    <script type="text/javascript" src="js/libs/fpsmeter.js"></script>
-    <script type="text/javascript" src="js/libs/pixi.js"></script>
-    <script type="text/javascript" src="js/libs/pixi-tilemap.js"></script>
-    <script type="text/javascript" src="js/libs/pixi-picture.js"></script>
-    <script type="text/javascript" src="js/libs/lz-string.js"></script>
-    <script type="text/javascript" src="js/libs/iphone-inline-video.browser.js"></script>
-    <script type="text/javascript" src="js/rpg_core.js"></script>
-    <script type="text/javascript" src="js/rpg_managers.js?web=20260916h"></script>
-    <script type="text/javascript" src="js/rpg_objects.js"></script>
-    <script type="text/javascript" src="js/rpg_scenes.js"></script>
-    <script type="text/javascript" src="js/rpg_sprites.js"></script>
-    <script type="text/javascript" src="js/rpg_windows.js"></script>
-    <script type="text/javascript" src="js/plugins.js"></script>
-    <script type="text/javascript" src="web_shim_after.js"></script>
-    <script type="text/javascript" src="js/main.js"></script>
-    <script type="text/javascript" src="mobile.js"></script>
-</body>
+<body style="background-color:black">
+<script src="nipplejs.js"></script>
+<script src="gamepad.js"></script>
+<script src="js/plugins/aaa___bundle.js"></script>
+<script src="data.bundle.js"></script>
+<script src="languages.en.bundle.js"></script>
+<script src="maps.js"></script>
+<script src="js/libs/js-yaml-master/jsyaml.js"></script>
+<script src="js/libs/pixi.js"></script>
+<script src="js/libs/pixi-tilemap.js"></script>
+<script src="js/libs/pixi-picture.js"></script>
+<script src="js/libs/lz-string.js"></script>
+<script src="js/libs/iphone-inline-video.browser.js"></script>
+<script src="js/rpg_core.js"></script>
+<script src="js/rpg_managers.js"></script>
+<script src="js/rpg_objects.js"></script>
+<script src="js/rpg_scenes.js"></script>
+<script src="js/rpg_sprites.js"></script>
+<script src="js/rpg_windows.js"></script>
+<script src="js/plugins.js"></script>
+<script src="js/main.js"></script>
 
+<script>
+(() => {
+const STORAGE_KEY='omori_mobile_v2';
+const HOME_URL='https://iamioo.github.io/home';
+const defaults={visible:true,scale:1,opacity:.9,preset:'default',layout:null};
+const presets={
+default:{up:{x:18,y:28},down:{x:18,y:72},left:{x:6,y:50},right:{x:30,y:50},a:{x:88,y:42},b:{x:72,y:68}},
+lefthand:{up:{x:82,y:28},down:{x:82,y:72},left:{x:70,y:50},right:{x:94,y:50},a:{x:12,y:42},b:{x:28,y:68}},
+compact:{up:{x:15,y:30},down:{x:15,y:65},left:{x:5,y:48},right:{x:25,y:48},a:{x:90,y:38},b:{x:78,y:60}}
+};
+let state; try{state=Object.assign({},defaults,JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')||{})}catch{state={...defaults}}
+let layout=state.layout||JSON.parse(JSON.stringify(presets[state.preset]||presets.default));
+let editMode=false;
+
+const buttons=[
+{id:'c-up',name:'up',kind:'medium',html:'<svg viewBox="0 0 24 24"><path d="M12 5l7 7-2 2-5-5-5 5-2-2z"/></svg>'},
+{id:'c-down',name:'down',kind:'medium',html:'<svg viewBox="0 0 24 24"><path d="M12 19l-7-7 2-2 5 5 5-5 2 2z"/></svg>'},
+{id:'c-left',name:'left',kind:'medium',html:'<svg viewBox="0 0 24 24"><path d="M5 12l7-7 2 2-5 5 5 5-2 2z"/></svg>'},
+{id:'c-right',name:'right',kind:'medium',html:'<svg viewBox="0 0 24 24"><path d="M19 12l-7 7-2-2 5-5-5-5 2-2z"/></svg>'},
+{id:'c-a',name:'a',kind:'big',html:'<span class="lbl">A</span>'},
+{id:'c-b',name:'b',kind:'small',html:'<span class="lbl">B</span>'}
+];
+const keyMap={up:'up',down:'down',left:'left',right:'right',a:'ok',b:'escape'};
+
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify({...state,layout}))}
+function setInput(name,down){
+ try{
+   if(window.fakeInput){down?fakeInput.down(name):fakeInput.up(name);return}
+ }catch{}
+ try{
+   if(typeof Input!=='undefined'&&Input._currentState){
+     Input._currentState[name]=!!down;
+     if(down){Input._latestButton=name;Input._pressedTime=0;Input._date=Date.now()}
+   }
+ }catch{}
+}
+function applyPos(){
+ const root=document.getElementById('mobileControls'); if(!root)return;
+ root.style.setProperty('--scale',state.scale);
+ root.style.setProperty('--opacity',state.opacity);
+ root.classList.toggle('hidden',!state.visible);
+ buttons.forEach(b=>{
+   const el=document.getElementById(b.id),p=layout[b.name]||{x:50,y:50};
+   if(el){el.style.left=p.x+'%';el.style.top=p.y+'%';el.classList.toggle('editMode',editMode)}
+ });
+}
+function enableDrag(el,key){
+ let dragging=false,sx=0,sy=0,ox=0,oy=0;
+ el.addEventListener('pointerdown',e=>{
+   if(!editMode)return;
+   e.preventDefault();dragging=true;sx=e.clientX;sy=e.clientY;ox=layout[key].x;oy=layout[key].y;
+   el.setPointerCapture?.(e.pointerId);
+ },{passive:false});
+ el.addEventListener('pointermove',e=>{
+   if(!dragging||!editMode)return;
+   e.preventDefault();
+   let nx=ox+(e.clientX-sx)/innerWidth*100,ny=oy+(e.clientY-sy)/innerHeight*100;
+   nx=Math.max(4,Math.min(96,nx));ny=Math.max(8,Math.min(92,ny));
+   layout[key]={x:nx,y:ny};el.style.left=nx+'%';el.style.top=ny+'%';
+ },{passive:false});
+ const end=()=>{if(dragging){dragging=false;save()}};
+ el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+}
+function buildControls(){
+ const root=document.createElement('div');root.id='mobileControls';document.body.appendChild(root);
+ buttons.forEach(b=>{
+   const el=document.createElement('button');el.id=b.id;el.className='ctrl '+b.kind;el.innerHTML=b.html;
+   const name=keyMap[b.name];
+   const down=e=>{if(editMode)return;e.preventDefault();e.stopPropagation();el.classList.add('pressed');setInput(name,true)};
+   const up=e=>{if(editMode)return;e.preventDefault();e.stopPropagation();el.classList.remove('pressed');setInput(name,false)};
+   el.addEventListener('pointerdown',down,{passive:false});el.addEventListener('pointerup',up,{passive:false});el.addEventListener('pointercancel',up,{passive:false});
+   el.addEventListener('touchstart',e=>{if(!editMode)e.preventDefault()},{passive:false});
+   enableDrag(el,b.name);root.appendChild(el);
+ });
+ const dot=document.createElement('span');dot.className='dpad-center';dot.style.left='18%';dot.style.top='50%';root.appendChild(dot);
+ applyPos();
+}
+function buildChrome(){
+ const bar=document.createElement('div');bar.id='topBar';bar.innerHTML='<button id="menuBtn">☰</button><span id="topTitle">OMORI — MOBILE</span>';document.body.appendChild(bar);
+ const overlay=document.createElement('div');overlay.id='menuOverlay';document.body.appendChild(overlay);
+ const menu=document.createElement('div');menu.id='sideMenu';menu.innerHTML=`
+ <div class="menuHead"><h2>MENÜ</h2><button id="closeMenu">✕</button></div>
+ <div class="menuBody">
+   <div class="menuSection">
+     <h3>STEUERUNG</h3>
+     <div class="row"><label>Steuerung sichtbar</label><div class="switch ${state.visible?'on':''}" id="swVisible"></div></div>
+     <div class="row"><label>Bearbeiten (bewegen)</label><div class="switch" id="swEdit"></div></div>
+     <div id="editHint" class="hint editBadge">Bearbeiten aktiv: Buttons ziehen.</div>
+     <div class="row"><label>Button-Größe</label><input type="range" id="rngScale" min=".65" max="1.6" step=".05" value="${state.scale}"><span class="val" id="valScale">${Math.round(state.scale*100)}%</span></div>
+     <div class="row"><label>Deckkraft</label><input type="range" id="rngOpacity" min=".2" max="1" step=".05" value="${state.opacity}"><span class="val" id="valOpacity">${Math.round(state.opacity*100)}%</span></div>
+   </div>
+   <div class="menuSection">
+     <h3>LAYOUT</h3>
+     <div class="pillRow">
+       <button class="pill ${state.preset==='default'?'on':''}" data-preset="default">Standard</button>
+       <button class="pill ${state.preset==='lefthand'?'on':''}" data-preset="lefthand">Linkshänder</button>
+       <button class="pill ${state.preset==='compact'?'on':''}" data-preset="compact">Kompakt</button>
+     </div>
+   </div>
+   <div class="menuSection">
+     <h3>NAVIGATION</h3>
+     <a class="linkBtn" href="${HOME_URL}">⌂ Zur Home-Seite</a>
+   </div>
+ </div>`;
+ document.body.appendChild(menu);
+
+ const open=()=>{menu.classList.add('open');overlay.classList.add('open')};
+ const close=()=>{menu.classList.remove('open');overlay.classList.remove('open')};
+ menuBtn.onclick=open;closeMenu.onclick=close;overlay.onclick=close;
+ swVisible.onclick=()=>{state.visible=!state.visible;swVisible.classList.toggle('on',state.visible);applyPos();save()};
+ swEdit.onclick=()=>{editMode=!editMode;swEdit.classList.toggle('on',editMode);editHint.classList.toggle('on',editMode);applyPos()};
+ rngScale.oninput=e=>{state.scale=+e.target.value;valScale.textContent=Math.round(state.scale*100)+'%';applyPos();save()};
+ rngOpacity.oninput=e=>{state.opacity=+e.target.value;valOpacity.textContent=Math.round(state.opacity*100)+'%';applyPos();save()};
+ menu.querySelectorAll('[data-preset]').forEach(p=>p.onclick=()=>{
+   state.preset=p.dataset.preset;layout=JSON.parse(JSON.stringify(presets[state.preset]));
+   menu.querySelectorAll('[data-preset]').forEach(x=>x.classList.toggle('on',x===p));applyPos();save()
+ });
+}
+function fit(){
+ const c=document.querySelector('#GameCanvas'),v=document.querySelector('#GameVideo'),u=document.querySelector('#UpperCanvas');if(!c)return;
+ const W=innerWidth,H=innerHeight;let w,h;if(W*.75>H){h=H;w=Math.floor(H/3*4)}else{w=W;h=Math.floor(W/4*3)}
+ ;[c,v,u].filter(Boolean).forEach(e=>{e.style.width=w+'px';e.style.height=h+'px'});
+}
+buildControls();buildChrome();setInterval(fit,100);
+})();
+</script>
+</body>
 </html>
